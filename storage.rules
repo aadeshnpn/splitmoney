@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isHouseholdMember(householdId) {
+      return request.auth != null &&
+        firestore.exists(/databases/(default)/documents/households/$(householdId)/household_members/$(request.auth.uid));
+    }
+
+    match /receipts/{householdId}/{allPaths=**} {
+      allow read: if isHouseholdMember(householdId);
+      allow write: if isHouseholdMember(householdId)
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif|heic)');
+    }
+  }
+}
