@@ -5,7 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useHousehold } from '@/hooks/useHousehold';
 import { formatCents } from '@/lib/money';
-import { CATEGORY_META, ExpenseCategory } from '@/types';
+import {
+  CATEGORY_META,
+  Expense,
+  ExpenseCategory,
+  ExpenseSplit,
+  LineItem,
+  ExpenseDraft,
+  ExpenseDraftLineItem,
+  ExpenseDraftSplit,
+} from '@/types';
 import Avatar from '@/components/ui/Avatar';
 import ExpenseForm from '@/components/ExpenseForm';
 import BottomNav from '@/components/BottomNav';
@@ -14,7 +23,9 @@ export default function ExpenseDetailPage({ expenseId }: { expenseId: string }) 
   const router = useRouter();
   const { getExpense, deleteExpense, updateExpense } = useExpenses();
   const { members } = useHousehold();
-  const [expenseData, setExpenseData] = useState<any>(null);
+  const [expenseData, setExpenseData] = useState<
+    (Expense & { splits: ExpenseSplit[]; lineItems: LineItem[]; receipt_url?: string | null; amount?: number }) | null
+  >(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showFullReceipt, setShowFullReceipt] = useState(false);
@@ -30,7 +41,7 @@ export default function ExpenseDetailPage({ expenseId }: { expenseId: string }) 
     return () => {
       isMounted = false;
     };
-  }, [expenseId]);
+  }, [expenseId, getExpense]);
 
   if (loading || !expenseData) {
     return (
@@ -45,7 +56,11 @@ export default function ExpenseDetailPage({ expenseId }: { expenseId: string }) 
   const receiptImage = expenseData.receiptUrl || expenseData.receipt_url;
   const totalAmount = expenseData.totalAmount ?? expenseData.amount ?? 0;
 
-  const handleEditSubmit = async (data: any, splits: any[], lineItems?: any[]) => {
+  const handleEditSubmit = async (
+    data: ExpenseDraft,
+    splits: ExpenseDraftSplit[],
+    lineItems?: ExpenseDraftLineItem[]
+  ) => {
     try {
       await updateExpense(expenseId, data, splits, lineItems ?? []);
       const updated = await getExpense(expenseId);
@@ -244,7 +259,7 @@ export default function ExpenseDetailPage({ expenseId }: { expenseId: string }) 
               Itemized Line Items
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {expenseData.lineItems.map((item: any, idx: number) => {
+              {expenseData.lineItems.map((item, idx: number) => {
                 const assignees = (item.assignedTo || [])
                   .map((uid: string) => members.find((m) => m.userId === uid)?.user?.displayName || 'Member')
                   .join(', ');
@@ -298,7 +313,7 @@ export default function ExpenseDetailPage({ expenseId }: { expenseId: string }) 
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {expenseData.splits && expenseData.splits.length > 0 ? (
-              expenseData.splits.map((split: any) => {
+              expenseData.splits.map((split) => {
                 const member = members.find((m) => m.userId === split.userId);
                 const percent = totalAmount > 0 ? Math.round((split.amount / totalAmount) * 100) : 0;
                 return (

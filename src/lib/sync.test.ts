@@ -41,14 +41,14 @@ describe('Sync Engine', () => {
         free: vi.fn(),
       }),
     };
-    (getDB as any).mockResolvedValue(mockDb);
+    vi.mocked(getDB).mockResolvedValue(mockDb as unknown as Awaited<ReturnType<typeof getDB>>);
 
-    (getPendingChanges as any).mockResolvedValue([
+    vi.mocked(getPendingChanges).mockResolvedValue([
       { table_name: 'expenses', record_id: 'test-1', action: 'INSERT', timestamp: 123 },
-    ]);
+    ] as unknown as Awaited<ReturnType<typeof getPendingChanges>>);
 
-    (firestore.doc as any).mockReturnValue('docRef');
-    (firestore.setDoc as any).mockResolvedValue(undefined);
+    vi.mocked(firestore.doc).mockReturnValue('docRef' as unknown as ReturnType<typeof firestore.doc>);
+    vi.mocked(firestore.setDoc).mockResolvedValue(undefined);
 
     await syncToFirebase('house-1');
 
@@ -71,10 +71,10 @@ describe('Sync Engine', () => {
         free: vi.fn(),
       }),
     };
-    (getDB as any).mockResolvedValue(mockDb);
-    (getPendingChanges as any).mockResolvedValue([]);
+    vi.mocked(getDB).mockResolvedValue(mockDb as unknown as Awaited<ReturnType<typeof getDB>>);
+    vi.mocked(getPendingChanges).mockResolvedValue([]);
 
-    (firestore.getDoc as any).mockResolvedValue({
+    vi.mocked(firestore.getDoc).mockResolvedValue({
       exists: () => true,
       data: () => ({
         id: 'house-1',
@@ -83,7 +83,7 @@ describe('Sync Engine', () => {
         invite_token: 'tok',
         created_at: 1,
       }),
-    });
+    } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
 
     const mockQuerySnapshot = {
       forEach: (cb: (doc: { data: () => Record<string, unknown>; id: string }) => void) => {
@@ -93,8 +93,12 @@ describe('Sync Engine', () => {
         });
       },
     };
-    (firestore.getDocs as any).mockResolvedValue(mockQuerySnapshot);
-    (firestore.collection as any).mockReturnValue('collectionRef');
+    vi.mocked(firestore.getDocs).mockResolvedValue(
+      mockQuerySnapshot as unknown as Awaited<ReturnType<typeof firestore.getDocs>>
+    );
+    vi.mocked(firestore.collection).mockReturnValue(
+      'collectionRef' as unknown as ReturnType<typeof firestore.collection>
+    );
 
     await syncFromFirebase('house-1');
 

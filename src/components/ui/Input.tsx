@@ -31,8 +31,6 @@ export function Input({
     if (onBlur) onBlur(e);
   };
 
-  const hasValue = props.value !== undefined && props.value !== '' || props.defaultValue;
-  
   return (
     <div className={`input-wrapper ${className}`}>
       {label && (

@@ -17,39 +17,43 @@ import {
 import { fullSync } from '@/lib/sync';
 import { useAuth } from '@/hooks/useAuth';
 import { useHousehold } from '@/hooks/useHousehold';
-import { Expense, ExpenseSplit, LineItem } from '@/types';
+import { Expense, ExpenseSplit, LineItem, ExpenseDraft } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export function useExpenses() {
   const { user } = useAuth();
   const { household } = useHousehold();
+  const householdId = household?.id;
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadExpenses = useCallback(async () => {
-    if (!household?.id) {
+    if (!householdId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const exps = await getExpensesByHousehold(household.id);
+      const exps = await getExpensesByHousehold(householdId);
       setExpenses(exps);
     } catch (e) {
       console.error('Error loading expenses:', e);
     } finally {
       setLoading(false);
     }
-  }, [household?.id]);
+  }, [householdId]);
 
   useEffect(() => {
-    loadExpenses();
+    const timer = setTimeout(() => {
+      void loadExpenses();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadExpenses]);
 
   const addExpense = async (
-    data: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'createdBy'>,
-    splits: Omit<ExpenseSplit, 'id'>[],
+    data: ExpenseDraft,
+    splits: Omit<ExpenseSplit, 'id' | 'expenseId'>[],
     lineItems?: Omit<LineItem, 'id' | 'expenseId'>[]
   ) => {
     if (!household?.id || !user?.id) return;
@@ -133,7 +137,7 @@ export function useExpenses() {
     if (household?.id) await fullSync(household.id);
   };
 
-  const getExpense = async (id: string) => {
+  const getExpense = useCallback(async (id: string) => {
     const expense = await dbGetExpense(id);
     if (!expense) return null;
 
@@ -141,7 +145,7 @@ export function useExpenses() {
     const lineItems = await getLineItemsByExpense(id);
 
     return { ...expense, splits, lineItems };
-  };
+  }, []);
 
   return { expenses, loading, addExpense, updateExpense, deleteExpense, getExpense, refreshExpenses: loadExpenses };
 }

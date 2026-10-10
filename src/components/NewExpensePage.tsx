@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import ExpenseForm from '@/components/ExpenseForm';
+import { ExpenseDraft, ExpenseDraftLineItem, ExpenseDraftSplit } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useHousehold } from '@/hooks/useHousehold';
@@ -23,7 +24,7 @@ export default function NewExpensePage() {
       ? [{ userId: user.id, displayName: 'You', avatarUrl: user.avatarUrl || null }]
       : [];
 
-  const handleSubmit = async (data: any, splits: any[], lineItems?: any[]) => {
+  const handleSubmit = async (data: ExpenseDraft, splits: ExpenseDraftSplit[], lineItems?: ExpenseDraftLineItem[]) => {
     await addExpense(data, splits, lineItems);
     router.push('/expenses');
   };

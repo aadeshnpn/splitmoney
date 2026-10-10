@@ -5,7 +5,6 @@ import { useExpenses } from '@/hooks/useExpenses';
 import { useHousehold } from '@/hooks/useHousehold';
 import BottomNav from '@/components/BottomNav';
 import { CATEGORY_META, ExpenseCategory } from '@/types';
-import { formatCents } from '@/lib/money';
 import ReportKPIs from '@/components/ReportKPIs';
 import CategoryDonutChart from '@/components/CategoryDonutChart';
 import SpendingTrendChart from '@/components/SpendingTrendChart';
@@ -32,7 +31,7 @@ export default function ReportsPage() {
   const { expenses, loading } = useExpenses();
   const { members } = useHousehold();
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth());

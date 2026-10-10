@@ -124,6 +124,25 @@ export interface TransactionEntry {
   category?: ExpenseCategory;
 }
 
+export interface ExpenseDraft {
+  title: string;
+  totalAmount: number;
+  date: string;
+  category: ExpenseCategory;
+  paidBy: string;
+  notes: string;
+  receiptUrl: string | null;
+  splitType: SplitType;
+}
+
+export type ExpenseDraftSplit = { userId: string; amount: number };
+
+export type ExpenseDraftLineItem = {
+  description: string;
+  amount: number;
+  assignedTo: string[] | null;
+};
+
 export interface OCRResult {
   vendorName: string | null;
   lineItems: { description: string; amount: number }[];

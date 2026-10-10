@@ -7,7 +7,7 @@ import FAB from '@/components/FAB';
 import TransactionList from '@/components/TransactionList';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useAuth } from '@/hooks/useAuth';
-import { CATEGORY_META, ExpenseCategory } from '@/types';
+import { CATEGORY_META } from '@/types';
 import { formatCents } from '@/lib/money';
 
 export default function ExpensesPage() {
@@ -26,7 +26,7 @@ export default function ExpensesPage() {
       email: user.email || '',
       avatarUrl: user.avatarUrl || null,
       householdId: user.householdId || null,
-      createdAt: user.createdAt || Date.now(),
+      createdAt: user.createdAt,
     });
   }
 

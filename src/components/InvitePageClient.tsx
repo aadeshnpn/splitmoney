@@ -21,11 +21,7 @@ export default function InvitePageClient({ token }: { token?: string }) {
       return;
     }
 
-    if (!token) {
-      setStatus('error');
-      setErrorMessage('No invite token provided.');
-      return;
-    }
+    if (!token) return;
 
     const join = async () => {
       if (joinedRef.current) return;
@@ -44,6 +40,10 @@ export default function InvitePageClient({ token }: { token?: string }) {
 
     join();
   }, [authLoading, user, token, router, joinHousehold]);
+
+  const missingToken = !authLoading && !!user && !token;
+  const statusToShow = missingToken ? 'error' : status;
+  const messageToShow = missingToken ? 'No invite token provided.' : errorMessage;
 
   return (
     <div
@@ -69,14 +69,14 @@ export default function InvitePageClient({ token }: { token?: string }) {
           boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
         }}
       >
-        {status === 'loading' && (
+        {statusToShow === 'loading' && (
           <>
             <div style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '0.75rem' }}>Joining household…</div>
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Syncing your invite across devices.</p>
           </>
         )}
 
-        {status === 'success' && (
+        {statusToShow === 'success' && (
           <>
             <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '0.75rem' }}>
               You&apos;re in{household?.name ? ` — ${household.name}` : ''}
@@ -85,12 +85,12 @@ export default function InvitePageClient({ token }: { token?: string }) {
           </>
         )}
 
-        {status === 'error' && (
+        {statusToShow === 'error' && (
           <>
             <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--danger)', marginBottom: '0.75rem' }}>
               Couldn&apos;t join
             </div>
-            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{errorMessage}</p>
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{messageToShow}</p>
             <button
               onClick={() => router.push('/household')}
               style={{

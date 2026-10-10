@@ -39,7 +39,7 @@ export default function MemberContributionChart({ memberData }: MemberContributi
             <XAxis dataKey="name" stroke="var(--text-secondary)" fontSize={12} />
             <YAxis stroke="var(--text-secondary)" fontSize={12} tickFormatter={(val) => `$${val}`} />
             <Tooltip
-              formatter={(val: any, name: any) => [
+              formatter={(val, name) => [
                 formatCents(Math.round(Number(val) * 100)),
                 name === 'Paid' ? 'Total Paid' : 'Total Share',
               ]}

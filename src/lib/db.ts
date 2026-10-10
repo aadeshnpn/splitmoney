@@ -6,24 +6,23 @@ const STORE_NAME = 'sqlite_store';
 const IDB_NAME = 'splitmoney_idb';
 
 let dbInstance: Database | null = null;
-let sqlPromise: Promise<any> | null = null;
+let sqlPromise: ReturnType<typeof initSqlJs> | null = null;
 
-
-function toCamelCase(obj: any): any {
+function toCamelCase(obj: unknown): unknown {
   if (obj === null || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(toCamelCase);
-  const newObj: any = {};
+  const newObj: Record<string, unknown> = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-      newObj[camelKey] = obj[key];
+      newObj[camelKey] = (obj as Record<string, unknown>)[key];
     }
   }
   return newObj;
 }
 
-function cleanParams(params: any[]): SqlValue[] {
-  return params.map(p => (p === undefined ? null : p)) as SqlValue[];
+function cleanParams(params: unknown[]): SqlValue[] {
+  return params.map((p) => (p === undefined ? null : p)) as SqlValue[];
 }
 
 function openIDB(): Promise<IDBDatabase> {
@@ -345,7 +344,7 @@ export async function getMemberRole(householdId: string, userId: string): Promis
   const db = await getDB();
   const stmt = db.prepare(`SELECT role FROM household_members WHERE household_id = ? AND user_id = ?`);
   stmt.bind(cleanParams([householdId, userId]));
-  const result = stmt.step() ? toCamelCase(stmt.getAsObject()) : null;
+  const result = stmt.step() ? (toCamelCase(stmt.getAsObject()) as { role?: string }) : null;
   stmt.free();
   return result ? (result.role as string) : null;
 }
@@ -376,7 +375,7 @@ export async function getExpensesByHousehold(
 ): Promise<Expense[]> {
   const db = await getDB();
   let query = `SELECT * FROM expenses WHERE household_id = ? AND is_deleted = 0`;
-  const params: any[] = [householdId];
+  const params: SqlValue[] = [householdId];
 
   if (opts?.category) {
     query += ` AND category = ?`;
@@ -648,5 +647,5 @@ export const db = {
 export default db;
 
 if (typeof window !== 'undefined') {
-  (window as any).db = db;
+  window.db = db;
 }

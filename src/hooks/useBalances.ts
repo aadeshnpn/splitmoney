@@ -5,18 +5,22 @@ import { getExpensesByHousehold, getSplitsByExpense, getSettlementsByHousehold }
 import { calculateBalances, simplifyDebts, getUserBalanceSummary } from '@/lib/balance';
 import { useAuth } from '@/hooks/useAuth';
 import { useHousehold } from '@/hooks/useHousehold';
-import { Balance, ExpenseSplit } from '@/types';
+import { Balance, ExpenseSplit, User } from '@/types';
+
+type BalanceEntry = { user: User; amount: number };
 
 export function useBalances() {
   const { user } = useAuth();
   const { household, members } = useHousehold();
+  const householdId = household?.id;
+  const userId = user?.id;
   const [balances, setBalances] = useState<Balance[]>([]);
-  const [youOwe, setYouOwe] = useState<any[]>([]);
-  const [owedToYou, setOwedToYou] = useState<any[]>([]);
+  const [youOwe, setYouOwe] = useState<BalanceEntry[]>([]);
+  const [owedToYou, setOwedToYou] = useState<BalanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadBalances = useCallback(async () => {
-    if (!household?.id || !user?.id) {
+    if (!householdId || !userId) {
       setBalances([]);
       setYouOwe([]);
       setOwedToYou([]);
@@ -25,7 +29,7 @@ export function useBalances() {
     }
     setLoading(true);
     try {
-      const expenses = await getExpensesByHousehold(household.id);
+      const expenses = await getExpensesByHousehold(householdId);
       
       const allSplits: ExpenseSplit[] = [];
       for (const exp of expenses) {
@@ -34,14 +38,14 @@ export function useBalances() {
         allSplits.push(...splits);
       }
       
-      const settlements = await getSettlementsByHousehold(household.id);
+      const settlements = await getSettlementsByHousehold(householdId);
       
       const rawBalances = calculateBalances(expenses, allSplits, settlements);
       const simplified = simplifyDebts(rawBalances);
       
-      const users = members.map(m => m.user!).filter(Boolean);
+      const users = members.map(m => m.user).filter((member): member is User => Boolean(member));
       
-      const summary = getUserBalanceSummary(user.id, simplified, users);
+      const summary = getUserBalanceSummary(userId, simplified, users);
       
       setBalances(simplified);
       setYouOwe(summary.youOwe);
@@ -51,10 +55,13 @@ export function useBalances() {
     } finally {
       setLoading(false);
     }
-  }, [household?.id, user?.id, members]);
+  }, [householdId, userId, members]);
 
   useEffect(() => {
-    loadBalances();
+    const timer = setTimeout(() => {
+      void loadBalances();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadBalances]);
 
   return { balances, youOwe, owedToYou, loading, refreshBalances: loadBalances };

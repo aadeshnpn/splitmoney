@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { db } from '@/lib/db';
@@ -18,6 +18,17 @@ interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function readAuthError(err: unknown): { code: string; message: string } {
+  if (typeof err === 'object' && err !== null) {
+    const record = err as { code?: unknown; message?: unknown };
+    return {
+      code: typeof record.code === 'string' ? record.code : '',
+      message: typeof record.message === 'string' ? record.message : '',
+    };
+  }
+  return { code: '', message: '' };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -79,9 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(null);
             }
             setLoading(false);
-          }, (err: any) => {
+          }, (err: unknown) => {
             console.warn("Firebase auth state error:", err);
-            if (err?.code === 'auth/invalid-api-key' || err?.message?.includes('api-key')) {
+            const { code, message } = readAuthError(err);
+            if (code === 'auth/invalid-api-key' || message.includes('api-key')) {
               setAuthError("Firebase API key is missing or invalid. Please update .env.local with your project credentials.");
             }
             if (!isMockAuth) setLoading(false);
@@ -89,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           if (!isMockAuth) setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("Firebase Auth init warning:", err);
         if (!isMockAuth) setLoading(false);
       }
@@ -105,22 +117,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Sign in error:", err);
-      if (err.code === 'auth/invalid-api-key' || err.message?.includes('api-key')) {
+      const { code, message } = readAuthError(err);
+      if (code === 'auth/invalid-api-key' || message.includes('api-key')) {
         setAuthError("Firebase API Key is missing or invalid. Please configure .env.local with your Firebase project credentials.");
-      } else if (err.code === 'auth/unauthorized-domain') {
+      } else if (code === 'auth/unauthorized-domain') {
         const host = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
         setAuthError(`Domain "${host}" is not authorized in Firebase Console. Add "${host}" under Authentication -> Settings -> Authorized domains in Firebase Console.`);
-      } else if (err.code === 'auth/popup-closed-by-user') {
+      } else if (code === 'auth/popup-closed-by-user') {
         // User closed popup
       } else {
-        setAuthError(err.message || "Failed to sign in with Google.");
+        setAuthError(message || "Failed to sign in with Google.");
       }
     }
   };
 
-  const signInAsTestUser = async (name: string = 'Test User', id: string = 'test-user-1') => {
+  const signInAsTestUser = useCallback(async (name: string = 'Test User', id: string = 'test-user-1') => {
     const testUser: User = {
       id,
       displayName: name,
@@ -139,11 +152,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(testUser);
       localStorage.setItem('test_user_id', testUser.id);
-    } catch (e) {
+    } catch {
       setUser(testUser);
       localStorage.setItem('test_user_id', testUser.id);
     }
-  };
+  }, []);
 
   const signOut = async () => {
     try {
@@ -168,10 +181,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).signInAsTestUser = signInAsTestUser;
-      
+      window.signInAsTestUser = signInAsTestUser;
+
       // Expose a helper to easily add mock members to a household for E2E tests
-      (window as any).addMockMembers = async (householdId: string) => {
+      window.addMockMembers = async (householdId: string) => {
         const u2: User = {
           id: 'adv-user-2', displayName: 'Advanced Two', email: 'adv2@example.com',
           avatarUrl: null, householdId, createdAt: Date.now()

@@ -6,6 +6,7 @@ import {
   getDoc,
   deleteDoc,
 } from 'firebase/firestore';
+import { SqlValue } from 'sql.js';
 import { db as firebaseDB } from '@/lib/firebase';
 import { getDB, getPendingChanges, markSynced } from '@/lib/db';
 import { Household } from '@/types';
@@ -181,7 +182,14 @@ export async function syncToFirebase(householdId: string) {
       } else if (recordData) {
         await setDoc(docRef, recordData, { merge: true });
         if (tableName === 'households') {
-          await upsertInviteDoc(recordData as any);
+          await upsertInviteDoc(recordData as {
+            id: string;
+            name: string;
+            created_by?: string;
+            createdBy?: string;
+            invite_token?: string | null;
+            inviteToken?: string | null;
+          });
         }
       }
 
@@ -202,7 +210,7 @@ function upsertFirestoreRow(localDb: Awaited<ReturnType<typeof getDB>>, colName:
   const placeholders = safeKeys.map(() => '?').join(', ');
   const values = safeKeys.map((k) => data[k]);
   const sql = `INSERT OR REPLACE INTO ${colName} (${safeKeys.join(', ')}) VALUES (${placeholders})`;
-  localDb.run(sql, values as any[]);
+  localDb.run(sql, values.map((value) => (value === undefined ? null : value)) as SqlValue[]);
 }
 
 function collectLocalIds(
@@ -211,7 +219,7 @@ function collectLocalIds(
   params: unknown[]
 ): string[] {
   const stmt = localDb.prepare(sql);
-  stmt.bind(params as any[]);
+  stmt.bind(params as SqlValue[]);
   const ids: string[] = [];
   while (stmt.step()) {
     const row = stmt.getAsObject() as { id?: string; user_id?: string };
@@ -368,7 +376,8 @@ export async function fullSync(householdId: string) {
   await syncFromFirebase(householdId);
 }
 
-export const syncDatabase = async (householdId: string, _userId?: string) => {
+export const syncDatabase = async (householdId: string, userId?: string) => {
+  void userId;
   return fullSync(householdId);
 };
 
