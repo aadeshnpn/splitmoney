@@ -37,7 +37,7 @@ export default function SpendingTrendChart({ monthlyData }: SpendingTrendChartPr
             <XAxis dataKey="month" stroke="var(--text-secondary)" fontSize={12} />
             <YAxis stroke="var(--text-secondary)" fontSize={12} tickFormatter={(val) => `$${val}`} />
             <Tooltip
-              formatter={(val: any) => [formatCents(Math.round(Number(val) * 100)), 'Total Spent']}
+              formatter={(val) => [formatCents(Math.round(Number(val) * 100)), 'Total Spent']}
               contentStyle={{
                 backgroundColor: 'rgba(26, 35, 50, 0.95)',
                 borderRadius: '8px',

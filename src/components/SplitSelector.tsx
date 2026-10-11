@@ -66,7 +66,7 @@ export default function SplitSelector({
 
     const sumPct = members.reduce((sum, m) => sum + (parseFloat(pcts[m.userId] || '0') || 0), 0);
     if (Math.abs(sumPct - 100) < 0.01) {
-      let remainder = amount - allocated;
+      const remainder = amount - allocated;
       if (remainder > 0) {
         const sortedMembers = [...members].sort((a, b) => {
           const pctA = parseFloat(pcts[a.userId] || '0') || 0;
@@ -90,54 +90,57 @@ export default function SplitSelector({
   };
 
   useEffect(() => {
-    if (splitType === 'EQUAL') {
-      const activeIds = splits.filter((s) => s.amount > 0).map((s) => s.userId);
-      const targetIds = activeIds.length > 0 ? activeIds : members.map((m) => m.userId);
-      const newSplits = calculateEqualSplits(targetIds, totalAmount);
+    const timer = setTimeout(() => {
+      if (splitType === 'EQUAL') {
+        const activeIds = splits.filter((s) => s.amount > 0).map((s) => s.userId);
+        const targetIds = activeIds.length > 0 ? activeIds : members.map((m) => m.userId);
+        const newSplits = calculateEqualSplits(targetIds, totalAmount);
 
-      const hasChanged = newSplits.some((ns, i) => ns.amount !== splits[i]?.amount);
-      if (hasChanged) onSplitsChange(newSplits);
-    } else if (splitType === 'CUSTOM_AMOUNT') {
-      const initialAmounts: Record<string, string> = {};
-      members.forEach((m) => {
-        if (customAmounts[m.userId] !== undefined && customAmounts[m.userId] !== '') {
-          initialAmounts[m.userId] = customAmounts[m.userId];
-        } else {
-          const existing = splits.find((s) => s.userId === m.userId)?.amount || 0;
-          initialAmounts[m.userId] = existing > 0 ? (existing / 100).toFixed(2) : '';
+        const hasChanged = newSplits.some((ns, i) => ns.amount !== splits[i]?.amount);
+        if (hasChanged) onSplitsChange(newSplits);
+      } else if (splitType === 'CUSTOM_AMOUNT') {
+        const initialAmounts: Record<string, string> = {};
+        members.forEach((m) => {
+          if (customAmounts[m.userId] !== undefined && customAmounts[m.userId] !== '') {
+            initialAmounts[m.userId] = customAmounts[m.userId];
+          } else {
+            const existing = splits.find((s) => s.userId === m.userId)?.amount || 0;
+            initialAmounts[m.userId] = existing > 0 ? (existing / 100).toFixed(2) : '';
+          }
+        });
+        setCustomAmounts(initialAmounts);
+        const newSplits = members.map((m) => ({
+          userId: m.userId,
+          amount: parseMoney(initialAmounts[m.userId] || ''),
+        }));
+        const changed = newSplits.some((ns) => ns.amount !== (splits.find((s) => s.userId === ns.userId)?.amount || 0));
+        if (changed) onSplitsChange(newSplits);
+      } else if (splitType === 'PERCENTAGE') {
+        const initialPcts: Record<string, string> = {};
+        members.forEach((m) => {
+          const s = splits.find((x) => x.userId === m.userId);
+          const pct = totalAmount > 0 && s ? ((s.amount / totalAmount) * 100).toFixed(1) : '0';
+          initialPcts[m.userId] = pct;
+        });
+        setPercentages(initialPcts);
+        const newSplits = calculatePercentageSplits(initialPcts, totalAmount);
+        onSplitsChange(newSplits);
+      } else if (splitType === 'PER_ITEM') {
+        let items = lineItems;
+        if (items.length === 0 && totalAmount > 0 && onLineItemsChange) {
+          items = [
+            {
+              description: 'Item',
+              amount: totalAmount,
+              assignedTo: members.map((m) => m.userId),
+            },
+          ];
+          onLineItemsChange(items);
         }
-      });
-      setCustomAmounts(initialAmounts);
-      const newSplits = members.map((m) => ({
-        userId: m.userId,
-        amount: parseMoney(initialAmounts[m.userId] || ''),
-      }));
-      const changed = newSplits.some((ns) => ns.amount !== (splits.find((s) => s.userId === ns.userId)?.amount || 0));
-      if (changed) onSplitsChange(newSplits);
-    } else if (splitType === 'PERCENTAGE') {
-      const initialPcts: Record<string, string> = {};
-      members.forEach((m) => {
-        const s = splits.find((x) => x.userId === m.userId);
-        const pct = totalAmount > 0 && s ? ((s.amount / totalAmount) * 100).toFixed(1) : '0';
-        initialPcts[m.userId] = pct;
-      });
-      setPercentages(initialPcts);
-      const newSplits = calculatePercentageSplits(initialPcts, totalAmount);
-      onSplitsChange(newSplits);
-    } else if (splitType === 'PER_ITEM') {
-      let items = lineItems;
-      if (items.length === 0 && totalAmount > 0 && onLineItemsChange) {
-        items = [
-          {
-            description: 'Item',
-            amount: totalAmount,
-            assignedTo: members.map((m) => m.userId),
-          },
-        ];
-        onLineItemsChange(items);
+        recalculatePerItem(items);
       }
-      recalculatePerItem(items);
-    }
+    }, 0);
+    return () => clearTimeout(timer);
     // Intentionally keyed to total/split mode changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalAmount, splitType]);

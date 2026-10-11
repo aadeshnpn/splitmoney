@@ -43,8 +43,8 @@ describe('money.ts', () => {
       expect(formatCents(0)).toBe('$0.00');
     });
     it('handles undefined/null safely by treating it as 0', () => {
-      expect(formatCents(undefined as any)).toBe('$0.00');
-      expect(formatCents(null as any)).toBe('$0.00');
+      expect(formatCents(undefined as unknown as number)).toBe('$0.00');
+      expect(formatCents(null as unknown as number)).toBe('$0.00');
     });
   });
 

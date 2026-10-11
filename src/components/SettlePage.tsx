@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useHousehold } from '@/hooks/useHousehold';
 import { db } from '@/lib/db';
-import { parseDollarInput, formatCents } from '@/lib/money';
+import { parseDollarInput } from '@/lib/money';
 import { Settlement } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,21 +13,21 @@ export default function SettlePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { members, household } = useHousehold();
+  const { members } = useHousehold();
 
   const toUserParam = searchParams.get('toUser') || '';
 
   const [toUserId, setToUserId] = useState(toUserParam);
+  const [seenToUserParam, setSeenToUserParam] = useState(toUserParam);
   const [amountInput, setAmountInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (toUserParam) {
-      setToUserId(toUserParam);
-    }
-  }, [toUserParam]);
+  if (toUserParam !== seenToUserParam) {
+    setSeenToUserParam(toUserParam);
+    if (toUserParam) setToUserId(toUserParam);
+  }
 
   const otherMembers = members.filter((m) => m.userId !== user?.id);
 

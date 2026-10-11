@@ -4,7 +4,17 @@ import { useState, useMemo } from 'react';
 import CategoryPicker from './CategoryPicker';
 import SplitSelector, { EditableLineItem } from './SplitSelector';
 import ReceiptUploader from './ReceiptUploader';
-import { Expense, ExpenseCategory, SplitType, ExpenseSplit, LineItem } from '@/types';
+import {
+  Expense,
+  ExpenseCategory,
+  SplitType,
+  ExpenseSplit,
+  LineItem,
+  OCRResult,
+  ExpenseDraft,
+  ExpenseDraftSplit,
+  ExpenseDraftLineItem,
+} from '@/types';
 import { parseMoney, formatCents } from '@/lib/money';
 import { CATEGORY_META } from '@/types';
 import Avatar from '@/components/ui/Avatar';
@@ -17,7 +27,7 @@ type ExpenseWithRelations = Expense & {
 
 interface ExpenseFormProps {
   expense?: ExpenseWithRelations;
-  onSubmit: (data: any, splits: any[], lineItems?: any[]) => void;
+  onSubmit: (data: ExpenseDraft, splits: ExpenseDraftSplit[], lineItems?: ExpenseDraftLineItem[]) => void;
   onCancel: () => void;
   members: { userId: string; displayName: string; avatarUrl: string | null }[];
   currentUserId: string;
@@ -85,7 +95,7 @@ export default function ExpenseForm({ expense, onSubmit, onCancel, members, curr
   const handleNext = () => setStep((s) => Math.min(3, s + 1));
   const handleBack = () => setStep((s) => Math.max(1, s - 1));
 
-  const handleOCRResult = (result: any) => {
+  const handleOCRResult = (result: OCRResult & { category?: string }) => {
     if (result.vendorName) setTitle(result.vendorName);
     if (result.total) setAmountInput((result.total / 100).toFixed(2));
     if (result.category) setCategory(result.category as ExpenseCategory);

@@ -81,7 +81,7 @@ export default function CategoryDonutChart({ data, totalSpent }: CategoryDonutCh
               ))}
             </Pie>
             <Tooltip
-              formatter={(val: any) => [formatCents(Number(val) || 0), 'Amount']}
+              formatter={(val) => [formatCents(Number(val) || 0), 'Amount']}
               contentStyle={{
                 backgroundColor: 'rgba(26, 35, 50, 0.95)',
                 borderRadius: '8px',

@@ -1,72 +1,13 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
+const { parseVisionResponse } = require('./receiptParser');
 
 initializeApp();
 
 const visionApiKey = defineSecret('GOOGLE_CLOUD_VISION_API_KEY');
 
-function parseVisionResponse(data) {
-  const textAnnotations = data.responses?.[0]?.textAnnotations;
-  if (!textAnnotations || textAnnotations.length === 0) {
-    return {
-      vendorName: null,
-      lineItems: [],
-      subtotal: null,
-      tax: null,
-      tip: null,
-      total: null,
-      rawText: '',
-    };
-  }
-
-  const rawText = textAnnotations[0].description || '';
-  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
-  const vendorName = lines.length > 0 ? lines[0] : null;
-  const lineItems = [];
-
-  for (const line of lines) {
-    const match = line.match(/^(.*?)\s+\$?(\d+\.\d{2})$/);
-    if (!match) continue;
-    const description = match[1].trim();
-    const lower = description.toLowerCase();
-    if (
-      lower.includes('total') ||
-      lower.includes('subtotal') ||
-      lower.includes('tax') ||
-      lower.includes('tip') ||
-      lower.includes('balance')
-    ) {
-      continue;
-    }
-    lineItems.push({
-      description,
-      amount: Math.round(parseFloat(match[2]) * 100),
-    });
-  }
-
-  let total = null;
-  for (const line of lines) {
-    const lower = line.toLowerCase();
-    if (lower.includes('total') && !lower.includes('subtotal')) {
-      const match = line.match(/\$?(\d+\.\d{2})/);
-      if (match) {
-        total = Math.round(parseFloat(match[1]) * 100);
-        break;
-      }
-    }
-  }
-
-  return {
-    vendorName,
-    lineItems,
-    subtotal: null,
-    tax: null,
-    tip: null,
-    total: total || (lineItems.length > 0 ? lineItems.reduce((acc, item) => acc + item.amount, 0) : null),
-    rawText,
-  };
-}
+exports.parseVisionResponse = parseVisionResponse;
 
 exports.scanReceipt = onCall({ secrets: [visionApiKey], cors: true }, async (request) => {
   if (!request.auth) {

@@ -9,13 +9,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 export function useHousehold() {
   const { user, refreshUser } = useAuth();
+  const userId = user?.id;
+  const userHouseholdId = user?.householdId;
   const [household, setHousehold] = useState<Household | null>(null);
   const [userHouseholds, setUserHouseholds] = useState<Household[]>([]);
   const [members, setMembers] = useState<(HouseholdMember & { user: User })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadHouseholdData = useCallback(async () => {
-    if (!user?.id) {
+    if (!userId) {
       setHousehold(null);
       setUserHouseholds([]);
       setMembers([]);
@@ -24,12 +26,12 @@ export function useHousehold() {
     }
     setLoading(true);
     try {
-      const allHouseholds = await db.getUserHouseholds(user.id);
+      const allHouseholds = await db.getUserHouseholds(userId);
       setUserHouseholds(allHouseholds);
 
-      const activeHouseholdId = user.householdId || (allHouseholds.length > 0 ? allHouseholds[0].id : null);
-      if (activeHouseholdId && !user.householdId) {
-        await db.updateUserHousehold(user.id, activeHouseholdId);
+      const activeHouseholdId = userHouseholdId || (allHouseholds.length > 0 ? allHouseholds[0].id : null);
+      if (activeHouseholdId && !userHouseholdId) {
+        await db.updateUserHousehold(userId, activeHouseholdId);
       }
 
       if (activeHouseholdId) {
@@ -48,10 +50,13 @@ export function useHousehold() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.householdId]);
+  }, [userId, userHouseholdId]);
 
   useEffect(() => {
-    loadHouseholdData();
+    const timer = setTimeout(() => {
+      void loadHouseholdData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadHouseholdData]);
 
   const switchHousehold = async (targetHouseholdId: string) => {

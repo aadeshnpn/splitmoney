@@ -14,6 +14,35 @@ export function inferCategoryFromVendor(vendor: string): ExpenseCategory {
   return 'other';
 }
 
+export function isReceiptSummaryLine(description: string): boolean {
+  const lower = description.toLowerCase();
+  return (
+    lower.includes('total') ||
+    lower.includes('subtotal') ||
+    lower.includes('tax') ||
+    lower.includes('tip') ||
+    lower.includes('gratuity') ||
+    lower.includes('balance')
+  );
+}
+
+function lineAmountCents(line: string): number | null {
+  const match = line.match(/\$?\s*(\d+\.\d{2})/);
+  if (!match) return null;
+  return dollarsToCents(parseFloat(match[1]));
+}
+
+type SummaryField = 'subtotal' | 'tax' | 'tip' | 'total';
+
+function summaryField(line: string): SummaryField | null {
+  const lower = line.toLowerCase();
+  if (lower.includes('subtotal') || lower.includes('sub-total') || lower.includes('sub total')) return 'subtotal';
+  if (/\b(tip|gratuity)\b/.test(lower)) return 'tip';
+  if (lower.includes('tax')) return 'tax';
+  if (lower.includes('total')) return 'total';
+  return null;
+}
+
 export function extractLineItems(text: string): { description: string; amount: number }[] {
   const lines = text.split('\n');
   const items: { description: string; amount: number }[] = [];
@@ -25,9 +54,7 @@ export function extractLineItems(text: string): { description: string; amount: n
     if (match) {
       const description = match[1].trim();
       const priceStr = match[2];
-      const lower = description.toLowerCase();
-      // Exclude total/subtotal/tax/tip lines
-      if (!lower.includes('total') && !lower.includes('subtotal') && !lower.includes('tax') && !lower.includes('tip') && !lower.includes('balance')) {
+      if (!isReceiptSummaryLine(description)) {
         items.push({
           description,
           amount: dollarsToCents(parseFloat(priceStr)),
@@ -39,7 +66,11 @@ export function extractLineItems(text: string): { description: string; amount: n
   return items;
 }
 
-export function parseVisionResponse(data: any): OCRResult {
+type VisionResponse = {
+  responses?: { textAnnotations?: { description?: string }[] }[];
+};
+
+export function parseVisionResponse(data: VisionResponse): OCRResult {
   const textAnnotations = data.responses?.[0]?.textAnnotations;
   if (!textAnnotations || textAnnotations.length === 0) {
     return {
@@ -59,26 +90,28 @@ export function parseVisionResponse(data: any): OCRResult {
 
   const lineItems = extractLineItems(rawText);
 
-  // Extract total amount if present
-  let total: number | null = null;
+  const summary: Record<SummaryField, number | null> = {
+    subtotal: null,
+    tax: null,
+    tip: null,
+    total: null,
+  };
+
   for (const line of lines) {
-    const lower = line.toLowerCase();
-    if (lower.includes('total') && !lower.includes('subtotal')) {
-      const match = line.match(/\$?(\d+\.\d{2})/);
-      if (match) {
-        total = dollarsToCents(parseFloat(match[1]));
-        break;
-      }
-    }
+    const field = summaryField(line);
+    if (!field || summary[field] !== null) continue;
+    const amount = lineAmountCents(line);
+    if (amount === null) continue;
+    summary[field] = amount;
   }
 
   return {
     vendorName,
     lineItems,
-    subtotal: null,
-    tax: null,
-    tip: null,
-    total: total || (lineItems.length > 0 ? lineItems.reduce((acc, item) => acc + item.amount, 0) : null),
+    subtotal: summary.subtotal,
+    tax: summary.tax,
+    tip: summary.tip,
+    total: summary.total || (lineItems.length > 0 ? lineItems.reduce((acc, item) => acc + item.amount, 0) : null),
     rawText,
   };
 }
